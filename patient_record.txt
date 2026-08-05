@@ -1,0 +1,5 @@
+Patient Name: b
+Blood Type: AB+
+Allergies: 
+Current Medications: 
+Medical History: 
