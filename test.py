@@ -7,4 +7,8 @@ response = ollama.chat(
     ]
 )
 
+<<<<<<< HEAD
 print(response['message']['content'])
+=======
+print(response['message']['content'])
+>>>>>>> ce28435f31caa3ab7a8c4ca182d2c9317b6e51dd
