@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_34-a55e51db9b0c94cb111817902c1c4146bc1b0f93",
+  "solcVersion": "0.8.34",
+  "solcLongVersion": "0.8.34+commit.80d5c536",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.16.0"
+  },
+  "userSourceNameMap": {
+    "contracts/MediVaultAccess.sol": "project/contracts/MediVaultAccess.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "osaka",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/MediVaultAccess.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract MediVaultAccess {\n\n    address public admin; // the person who deployed this contract = hospital admin\n\n    // ---- DATA STRUCTURES ----\n\n    struct Patient {\n        bool registered;\n        string ipfsCID;       // pointer to encrypted record on IPFS\n        bool breakGlassAllowed; // did patient pre-authorize emergency access?\n    }\n\n    struct Doctor {\n        bool registered;\n        bool approved; // admin has to approve before doctor can do anything\n    }\n\n    // wallet address => Patient info\n    mapping(address => Patient) public patients;\n\n    // wallet address => Doctor info\n    mapping(address => Doctor) public doctors;\n\n    // patientAddress => doctorAddress => access granted?\n    mapping(address => mapping(address => bool)) public accessGranted;\n\n    // ---- EVENTS (this becomes your audit trail) ----\n\n    event PatientRegistered(address patient);\n    event DoctorRegistered(address doctor);\n    event DoctorApproved(address doctor);\n    event RecordUploaded(address patient, string cid);\n    event AccessGranted(address patient, address doctor);\n    event AccessRevoked(address patient, address doctor);\n    event BreakGlassTriggered(address patient, address doctor, address admin);\n\n    // ---- SETUP ----\n\n    constructor() {\n        admin = msg.sender; // whoever deploys the contract becomes admin\n    }\n\n    modifier onlyAdmin() {\n        require(msg.sender == admin, \"Only admin can do this\");\n        _;\n    }\n\n    // ---- PATIENT FUNCTIONS ----\n\n    function registerPatient(bool allowBreakGlass) external {\n        patients[msg.sender].registered = true;\n        patients[msg.sender].breakGlassAllowed = allowBreakGlass;\n        emit PatientRegistered(msg.sender);\n    }\n\n    function uploadRecord(string calldata cid) external {\n        require(patients[msg.sender].registered, \"Register first\");\n        patients[msg.sender].ipfsCID = cid;\n        emit RecordUploaded(msg.sender, cid);\n    }\n\n    function grantAccess(address doctor) external {\n        require(patients[msg.sender].registered, \"Register first\");\n        require(doctors[doctor].approved, \"Doctor not approved yet\");\n        accessGranted[msg.sender][doctor] = true;\n        emit AccessGranted(msg.sender, doctor);\n    }\n\n    function revokeAccess(address doctor) external {\n        accessGranted[msg.sender][doctor] = false;\n        emit AccessRevoked(msg.sender, doctor);\n    }\n\n    // ---- DOCTOR FUNCTIONS ----\n\n    function registerDoctor() external {\n        doctors[msg.sender].registered = true;\n        doctors[msg.sender].approved = false; // waits for admin\n        emit DoctorRegistered(msg.sender);\n    }\n\n    function getPatientRecord(address patient) external view returns (string memory) {\n        require(\n            accessGranted[patient][msg.sender],\n            \"Access not granted\"\n        );\n        return patients[patient].ipfsCID;\n    }\n\n    // ---- ADMIN FUNCTIONS ----\n\n    function approveDoctor(address doctor) external onlyAdmin {\n        require(doctors[doctor].registered, \"Doctor not registered\");\n        doctors[doctor].approved = true;\n        emit DoctorApproved(doctor);\n    }\n\n    // ---- BREAK-GLASS EMERGENCY ACCESS ----\n    // Requires: patient pre-authorized it + admin co-signs at the moment of emergency\n\n    function breakGlassAccess(address patient) external onlyAdmin returns (string memory) {\n        require(patients[patient].breakGlassAllowed, \"Patient did not authorize break-glass\");\n        emit BreakGlassTriggered(patient, msg.sender, admin);\n        return patients[patient].ipfsCID;\n    }\n}"
+      }
+    }
+  }
+}
