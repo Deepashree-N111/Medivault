@@ -1,0 +1,5 @@
+Patient Name: shetty
+Blood Type: A+
+Allergies: watermelon
+Current Medications: 
+Medical History: back pain
